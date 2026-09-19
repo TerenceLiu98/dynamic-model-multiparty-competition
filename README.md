@@ -1,6 +1,6 @@
-# Beyond Point Parties
+# Code for DWCW
 
-Numerical code for **Beyond Point Parties: Phase Transitions and Institutional Selection in Multiparty Competition**. The model represents parties as ideological distributions and combines voter acceptance, endogenous turnout, electoral payoffs and drift–diffusion dynamics.
+Numerical code for the paper *Diversity Within, Competition Without: Phase Transitions and Institutional Selection in Multiparty Dynamics*. The model represents parties as ideological distributions and combines voter acceptance, endogenous turnout, electoral payoffs and drift–diffusion dynamics.
 
 The experiments reproduce the mixed-objective phase boundaries, binary density trajectories, finite-width stability analysis, matched-electorate geographic comparisons and point-platform thresholds in Figures 4–8 and Table 1. All electorates and initial party states are synthetic.
 
@@ -32,15 +32,17 @@ beyond-point-parties/
 │   ├── repro_utils.py                # Output and provenance utilities
 │   └── plot_style.py                 # Plot settings
 ├── tests/                            # Model and entrypoint tests
-├── results/                          # CSV, NPZ and JSON numerical outputs
+├── results/                          # Generated CSV, NPZ and JSON outputs (ignored)
 │   ├── nonlinear/                    # Full density states
 │   └── critical/                     # Additional relaxation diagnostics
-└── figures/                          # Figures 4–8, Table 1 and overview.pdf
+└── figures/                          # Generated figures and overview PDF (ignored)
 ```
+
+Only source code, tests, dependency specifications and project configuration are version controlled. Generated numerical results, figures, logs and local experiment runs remain on disk but are excluded from Git.
 
 ## Installation
 
-Use Python 3.11 or newer and a virtual environment. The tested versions are recorded in `requirements-lock.txt`; the wider dependency bounds are in `requirements.txt`. A CPU is sufficient. No manuscript PDF, external data download or LaTeX installation is required.
+Use Python 3.11 or newer and a virtual environment. The tested versions are recorded in `requirements-lock.txt`; the wider dependency bounds are in `requirements.txt`. A CPU is sufficient, and no manuscript PDF or external data download is required. Figure generation uses SciencePlots with the `science` and `ieee` styles, which require a working LaTeX installation.
 
 ```bash
 python -m venv .venv
@@ -63,7 +65,6 @@ The first command runs the tests, recomputes the numerical experiments, generate
 
 For a small smoke run, use `python code/run_all.py --profile quick`. Its outputs are isolated in `runs/quick/` and do not establish paper-precision agreement. Use `--output-dir PATH` to select another output location. For critical diagnostics on that run, pass `--results-dir PATH/results --output-dir PATH/results/critical` after a paper-profile run.
 
-Run tests alone with `python -m pytest -q`. Check the included numerical results without recomputing them with `python code/verify_reproduction.py --profile paper`.
+Run tests alone with `python -m pytest -q`. After generating the paper-profile outputs, check them without recomputing by running `python code/verify_reproduction.py --profile paper`.
 
 The critical trajectory remains a finite-time result at `t = 1600`; the additional diagnostics quantify slow relaxation without relabelling it as a converged endpoint.
-# DWCW

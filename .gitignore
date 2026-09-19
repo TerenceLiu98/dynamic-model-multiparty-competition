@@ -1,0 +1,34 @@
+# Generated research artifacts
+results/
+figures/
+runs/
+logs/
+artifacts/
+outputs/
+
+# Python environments and caches
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+*.egg-info/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Local runtime files
+*.log
+*.tmp
+*.zip
+
+# Editor and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
