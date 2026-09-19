@@ -95,3 +95,39 @@ def test_paper_binary_vote_critical_ratio():
 def test_mixed_objective_validation():
     with pytest.raises(ValueError):
         dp.solve_diagonal_state(2,.6,.002,theta=1.2,ny=81,nx=80)
+
+
+def test_stochastic_particle_trajectory_is_symmetric_reproducible_and_reflected():
+    from theta_dynamics import common_quantile_particles,simulate_stochastic_particles
+    state=dp.solve_diagonal_state(2,.6,.002,theta=.28,ny=81,nx=60,L=2.2)
+    common=common_quantile_particles(state,16)
+    first=simulate_stochastic_particles(state,count=16,dt=.1,horizon=.4,seed=7,record_every=1)
+    second=simulate_stochastic_particles(state,count=16,dt=.1,horizon=.4,seed=7,record_every=1)
+    assert np.allclose(common,-common[::-1],rtol=0,atol=1e-15)
+    assert np.allclose(first.initial_particles[0],first.initial_particles[1],rtol=0,atol=0)
+    assert first.common_shift[0] == pytest.approx(0,abs=1e-15)
+    assert first.differentiation[0] == pytest.approx(0,abs=1e-15)
+    assert np.array_equal(first.means,second.means)
+    assert np.array_equal(first.turnout,second.turnout)
+    assert np.all((first.turnout>0)&(first.turnout<1))
+    assert np.max(np.abs(first.final_particles))<=state.y[-1]
+
+
+def test_particle_drift_matches_direct_objective_autodiff():
+    import torch
+    from theta_dynamics import particle_drift
+    state=dp.solve_diagonal_state(2,.6,.002,theta=.28,ny=81,nx=40,L=2.2)
+    values=np.array([[-.2,-.05,.1],[.18,.02,-.12]])
+    actual=particle_drift(state,values)
+    particles=torch.tensor(values,requires_grad=True)
+    x=torch.tensor(state.x);weights=torch.tensor(state.wx)
+    acceptance=torch.exp(-.5*((x[:,None,None]-particles[None,:,:])/state.r)**2).mean(dim=2)
+    choice=torch.stack((acceptance[:,0]*(1-.5*acceptance[:,1]),
+                        acceptance[:,1]*(1-.5*acceptance[:,0])),dim=1)
+    support=weights@choice
+    objectives=(1-state.theta)*support+state.theta*support/support.sum()
+    expected=[]
+    for party in range(2):
+        gradient=torch.autograd.grad(objectives[party],particles,retain_graph=True)[0][party]
+        expected.append(len(values[party])*gradient.detach().numpy())
+    assert np.allclose(actual,np.asarray(expected),rtol=2e-13,atol=2e-13)

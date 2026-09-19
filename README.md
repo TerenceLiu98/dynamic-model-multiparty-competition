@@ -1,13 +1,13 @@
-# Code for DWCW
+# A Dynamic Model of Party Differentiation under Electoral Competition
 
-Numerical code for the paper *Diversity Within, Competition Without: Phase Transitions and Institutional Selection in Multiparty Dynamics*. The model represents parties as ideological distributions and combines voter acceptance, endogenous turnout, electoral payoffs and drift–diffusion dynamics.
+Numerical code for the paper *A Dynamic Model of Party Differentiation under Electoral Competition*. The model represents parties as ideological distributions and combines voter acceptance, endogenous turnout, electoral payoffs and drift–diffusion dynamics.
 
-The experiments reproduce the mixed-objective phase boundaries, binary density trajectories, finite-width stability analysis, matched-electorate geographic comparisons and point-platform thresholds in Figures 4–8 and Table 1. All electorates and initial party states are synthetic.
+The experiments reproduce the mixed-objective phase boundaries, deterministic and finite-particle binary trajectories, finite-width stability analysis, matched-electorate geographic comparisons and point-platform thresholds in Figures 4–8 and Table 1. All electorates and initial party states are synthetic.
 
 ## Structure
 
 ```text
-beyond-point-parties/
+BWDW/
 ├── README.md
 ├── requirements.txt
 ├── requirements-lock.txt

@@ -46,7 +46,7 @@ def environment():
         except importlib.metadata.PackageNotFoundError: packages[name]='not installed'
     return dict(generated_at_utc=datetime.now(timezone.utc).isoformat(),python=platform.python_version(),
                 platform=platform.platform(),packages=packages,
-                manuscript="Beyond Point Parties: Phase Transitions and Institutional Selection in Multiparty Competition",
+                manuscript="A Dynamic Model of Party Differentiation under Electoral Competition",
                 code_sha256={str(p.relative_to(ROOT)):sha256(p) for p in sorted((ROOT/'code').glob('*.py'))})
 
 

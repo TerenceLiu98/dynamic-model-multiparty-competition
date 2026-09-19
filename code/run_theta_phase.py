@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import brentq
 from distributional_phase import solve_diagonal_state, odd_principal_eigenpair
-from theta_dynamics import odd_growth_eigenpair, simulate_densities
+from theta_dynamics import odd_growth_eigenpair, simulate_densities,simulate_stochastic_particles
 from repro_utils import ROOT,write_json,write_csv,environment,flatten_metrics
 
 
@@ -182,6 +182,45 @@ def run_nonlinear(out,settings,tc=None):
                symmetry_projection_after_initialization=False,renormalisation_during_dynamics=False,
                stationarity='max partywise full SG RHS weighted L1 <1e-9 after t>=50; critical never early-stopped',
                growth_rate_fit='OLS log P vs time, 5<=t<=35, 1e-12<P<.05; only |lambda|>1e-7'))
+    particle_count=200 if settings.profile=='paper' else 40
+    particle_nodes=160 if settings.profile=='paper' else 60
+    particle_horizon=800. if settings.profile=='paper' else settings.horizon
+    particle_state=settings.state(2,.6,theta_c-.04,tol=1e-12,nx=particle_nodes)
+    checked_seeds=range(12) if settings.profile=='paper' else range(4)
+    particle_runs=[];trajectory_rows=[];seed_rows=[]
+    for seed in checked_seeds:
+        particle=simulate_stochastic_particles(
+            particle_state,count=particle_count,dt=settings.dt,horizon=particle_horizon,
+            seed=seed,record_every=max(1,int(round(1/settings.dt))))
+        particle_runs.append(particle)
+        trajectory_rows.extend(
+            dict(seed=seed,time=time,mean_0=means[0],mean_1=means[1],common_shift=common,
+                 differentiation=difference,turnout=turnout)
+            for time,means,common,difference,turnout in zip(
+                particle.times,particle.means,particle.common_shift,particle.differentiation,
+                particle.turnout,strict=True))
+        seed_rows.append(dict(seed=seed,terminal_common_shift=particle.common_shift[-1],
+                              terminal_differentiation=particle.differentiation[-1],
+                              terminal_turnout=particle.turnout[-1],
+                              branch=int(np.sign(particle.differentiation[-1]))))
+    write_csv(result/'theta_stochastic_trajectory.csv',trajectory_rows)
+    representative=particle_runs[0]
+    np.savez_compressed(raw/'stochastic_unstable.npz',
+                        initial_particles=representative.initial_particles,
+                        final_particles=np.stack([run.final_particles for run in particle_runs]),
+                        seeds=np.asarray(list(checked_seeds)))
+    write_csv(result/'theta_stochastic_seed_checks.csv',seed_rows)
+    write_json(result/'theta_stochastic_metadata.json',dict(**environment(),K=2,r=.6,
+               eps=particle_state.eps,theta=particle_state.theta,theta_c=theta_c,
+               particle_count=particle_count,voter_nodes=particle_nodes,ideology_nodes=settings.ny,
+               ideology_domain=[-settings.L,settings.L],dt=settings.dt,horizon=particle_horizon,
+               highlighted_seeds=[0,1],checked_seeds=list(checked_seeds),
+               record_every=max(1,int(round(1/settings.dt))),
+               initial_condition='both parties share the same symmetric quantile approximation to f_theta^*',
+               interpretation='one finite-particle realisation of Eq. (34); illustrative, not an estimator'))
+    branches=[row['branch'] for row in seed_rows]
+    print(f'stochastic trajectories: N={particle_count}, t={particle_horizon:g}, '
+          f'positive={branches.count(1)}, negative={branches.count(-1)}',flush=True)
 
 
 def run_checks(out,settings):

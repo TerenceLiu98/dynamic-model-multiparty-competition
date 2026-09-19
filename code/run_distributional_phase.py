@@ -341,7 +341,7 @@ def make_figures(output_root: Path) -> None:
     axes[1].plot(profile_case["y"], profile_case["stationary_density"], label=r"$f^*$")
     axes[1].plot(profile_case["y"], profile_case["normalized_odd_mode"], linestyle="--", label="odd mode")
     axes[1].set_xlabel("ideology")
-    axes[1].set_ylabel("density / normalized mode")
+    axes[1].set_ylabel("density / normalised mode")
     axes[1].set_title("Distributional separation mode")
     axes[1].legend(frameon=False)
 

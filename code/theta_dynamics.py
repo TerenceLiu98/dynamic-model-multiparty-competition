@@ -205,11 +205,101 @@ class NonlinearRun:
     dt: float
 
 
+@dataclass
+class StochasticParticleRun:
+    times: np.ndarray
+    means: np.ndarray
+    common_shift: np.ndarray
+    differentiation: np.ndarray
+    turnout: np.ndarray
+    initial_particles: np.ndarray
+    final_particles: np.ndarray
+    seed: int
+    dt: float
+
+
 def binary_initial_density(state,amplitude=.02):
     if state.K!=2: raise ValueError('Eq. (116) is the binary initial condition')
     if not 0<amplitude<1: raise ValueError('initial amplitude must lie in (0,1)')
     t=np.tanh(state.y/np.sqrt(state.variance))
     return state.f[None,:]*(1+amplitude*np.array([-1.,1.])[:,None]*t)
+
+
+def common_quantile_particles(state,count):
+    """Deterministic, reflection-symmetric quantiles of the common density."""
+    if count<2: raise ValueError('particle count must be at least two')
+    mass=state.f*state.wy
+    mass/=mass.sum()
+    quantiles=(np.arange(count)+.5)/count
+    particles=np.interp(quantiles,np.cumsum(mass),state.y)
+    return .5*(particles-particles[::-1])
+
+
+def _particle_feedback(state,particles):
+    """Empirical-measure drift and turnout for the reflected diffusion."""
+    particles=np.asarray(particles,dtype=float)
+    if state.K!=2 or particles.ndim!=2 or particles.shape[0]!=2:
+        raise ValueError('binary particles must have shape (2, N)')
+    if not np.all(np.isfinite(particles)) or np.max(np.abs(particles))>state.y[-1]+1e-12:
+        raise ValueError('particles must be finite and lie in the ideology domain')
+    kernels=np.exp(-.5*((state.x[None,:,None]-particles[:,None,:])/state.r)**2)
+    acceptance=kernels.mean(axis=2).T
+    choice,_,jacobian=choice_and_jacobian(acceptance)
+    support=state.wx@choice
+    turnout=float(support.sum())
+    if turnout<=0 or not np.isfinite(turnout):raise FloatingPointError('nonpositive turnout')
+    seats=support/turnout
+    own=np.diagonal(jacobian,axis1=1,axis2=2)
+    turnout_derivative=jacobian.sum(axis=1)
+    coefficient=(1-state.theta)*own+(state.theta/turnout)*(own-seats*turnout_derivative)
+    displacement=state.x[None,:,None]-particles[:,None,:]
+    drift=np.sum(state.wx[None,:,None]*coefficient.T[:,:,None]*kernels*displacement,
+                 axis=1)/(state.r**2)
+    return drift,turnout
+
+
+def particle_drift(state,particles):
+    """Empirical-measure drift for the reflected diffusion in Eq. (34)."""
+    return _particle_feedback(state,particles)[0]
+
+
+def _reflect_interval(values,limit):
+    shifted=np.mod(values+limit,4*limit)
+    return np.where(shifted<=2*limit,shifted-limit,3*limit-shifted)
+
+
+def simulate_stochastic_particles(state,*,count=200,dt=.1,horizon=800.,seed=0,
+                                  record_every=5,initial=None):
+    """Finite-particle realisation of Eq. (34), initialised at the common state."""
+    if state.K!=2:raise ValueError('the projected trajectory is defined for K=2')
+    if count<2 or dt<=0 or horizon<=0 or record_every<1:raise ValueError('invalid simulation parameters')
+    steps=int(round(horizon/dt))
+    if not np.isclose(steps*dt,horizon,rtol=0,atol=1e-10):
+        raise ValueError('horizon must be an integer multiple of dt')
+    if initial is None:
+        common=common_quantile_particles(state,count)
+        particles=np.tile(common,(2,1))
+    else:
+        particles=np.asarray(initial,dtype=float).copy()
+        if particles.shape!=(2,count):raise ValueError('initial particles must have shape (2, count)')
+    limit=float(state.y[-1]);particles=_reflect_interval(particles,limit)
+    initial_particles=particles.copy();rng=np.random.default_rng(seed)
+    times=[];means=[];turnout=[]
+    def record(time,current_turnout):
+        times.append(float(time));means.append(particles.mean(axis=1));turnout.append(current_turnout)
+    noise_scale=np.sqrt(2*state.eps*dt)
+    for step in range(steps+1):
+        drift,current_turnout=_particle_feedback(state,particles)
+        if step%record_every==0 or step==steps:record(step*dt,current_turnout)
+        if step==steps:break
+        particles+=dt*drift+noise_scale*rng.standard_normal(particles.shape)
+        particles=_reflect_interval(particles,limit)
+    means=np.asarray(means)
+    return StochasticParticleRun(
+        times=np.asarray(times),means=means,common_shift=means.mean(axis=1),
+        differentiation=.5*(means[:,1]-means[:,0]),turnout=np.asarray(turnout),
+        initial_particles=initial_particles,
+        final_particles=particles.copy(),seed=seed,dt=dt)
 
 
 def simulate_densities(state,*,dt=.1,horizon=1600.,critical=False,
