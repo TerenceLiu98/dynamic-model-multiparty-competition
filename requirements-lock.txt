@@ -1,0 +1,11 @@
+# Tested versions: Python 3.13.5 on Linux.
+# The CPU build of torch 2.10.0 is sufficient.
+numpy==2.3.5
+scipy==1.17.0
+pandas==2.2.3
+matplotlib==3.10.8
+SciencePlots==2.2.2
+torch==2.10.0
+pytest==9.0.2
+PyMuPDF==1.26.7
+threadpoolctl==3.6.0
